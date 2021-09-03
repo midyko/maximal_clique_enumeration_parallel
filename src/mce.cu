@@ -597,7 +597,7 @@ void maximalCliqueEnumeration(graphNode** structArray, unsigned initNodeCount, i
 	unsigned i = 0;
 
 	//Output file stream
-	std::ofstream  out("cliques.txt");
+	std::ofstream out("cliques.txt");
 	do{
 		//Get launch configurations for createNodes
 		unsigned dimBlock = min(workSize + 1 + (32 - ((workSize + 1) % 32)), 512);

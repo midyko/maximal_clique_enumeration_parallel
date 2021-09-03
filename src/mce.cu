@@ -342,7 +342,7 @@ __global__ void createNodes(graphNode** inNode, graphNode** outNode, unsigned* s
 
 				//get newcompsub
 				//newcompsub = oldcompsub + cur_v
-				for(unsigned i = 0; i <maxNeighbours; ++i){
+				for(unsigned i = 0; i <maxNeighbours+1; ++i){
 					if(inNode[id]->compsub[i] != -1){
 						outNode[outputIndex + outputId]->compsub[i] = inNode[id]->compsub[i];
 					}else{
@@ -597,7 +597,7 @@ void maximalCliqueEnumeration(graphNode** structArray, unsigned initNodeCount, i
 	unsigned i = 0;
 
 	//Output file stream
-	std::ofstream out("cliques.txt");
+	std::ofstream  out("cliques.txt");
 	do{
 		//Get launch configurations for createNodes
 		unsigned dimBlock = min(workSize + 1 + (32 - ((workSize + 1) % 32)), 512);
@@ -649,12 +649,14 @@ void maximalCliqueEnumeration(graphNode** structArray, unsigned initNodeCount, i
 				CUDA_CHECK_RETURN(cudaMallocManaged((void**)&(structArray2[i]->cand), sizeof(int) * maxNeighbours));
 				structArray2[i]->cnot = new int[maxNeighbours];
 				CUDA_CHECK_RETURN(cudaMallocManaged((void**)&(structArray2[i]->cnot), sizeof(int) * maxNeighbours));
-				structArray2[i]->compsub = new int[maxNeighbours];
-				CUDA_CHECK_RETURN(cudaMallocManaged((void**)&(structArray2[i]->compsub), sizeof(int) * maxNeighbours));
+				structArray2[i]->compsub = new int[maxNeighbours+1];
+				CUDA_CHECK_RETURN(cudaMallocManaged((void**)&(structArray2[i]->compsub), sizeof(int) * (maxNeighbours+1)));
 
 				for(unsigned k = 0; k < maxNeighbours; ++k){
 					structArray2[i]->cand[k] = -1;
 					structArray2[i]->cnot[k] = -1;
+				}
+				for (unsigned k = 0; k < maxNeighbours+1; ++k) {
 					structArray2[i]->compsub[k] = -1;
 				}
 			}
@@ -706,12 +708,16 @@ void maximalCliqueEnumeration(graphNode** structArray, unsigned initNodeCount, i
 				CUDA_CHECK_RETURN(cudaMallocManaged((void**)&(structArray[i]->cand), sizeof(int) * maxNeighbours));
 				structArray[i]->cnot = new int[maxNeighbours];
 				CUDA_CHECK_RETURN(cudaMallocManaged((void**)&(structArray[i]->cnot), sizeof(int) * maxNeighbours));
-				structArray[i]->compsub = new int[maxNeighbours];
-				CUDA_CHECK_RETURN(cudaMallocManaged((void**)&(structArray[i]->compsub), sizeof(int) * maxNeighbours));
+				structArray[i]->compsub = new int[maxNeighbours+1];
+				CUDA_CHECK_RETURN(cudaMallocManaged((void**)&(structArray[i]->compsub), sizeof(int) * (maxNeighbours+1)));
 
 				for(unsigned k = 0; k < maxNeighbours; ++k){
 					structArray[i]->cand[k] = -1;
 					structArray[i]->cnot[k] = -1;
+				}
+
+
+				for (unsigned k = 0; k < maxNeighbours+1; ++k) {
 					structArray[i]->compsub[k] = -1;
 				}
 			}
@@ -793,13 +799,15 @@ unsigned generateInitialNodes(graphNode** structArray, int* intData, unsigned fi
 		structArray[initNodeCount]->cnot = new int[maxNeighbours];
 		CUDA_CHECK_RETURN(cudaMallocManaged((void**)&(structArray[initNodeCount]->cnot), sizeof(int) * maxNeighbours));
 
-		structArray[initNodeCount]->compsub = new int[maxNeighbours];
-		CUDA_CHECK_RETURN(cudaMallocManaged((void**)&(structArray[initNodeCount]->compsub), sizeof(int) * maxNeighbours));
+		structArray[initNodeCount]->compsub = new int[maxNeighbours+1];
+		CUDA_CHECK_RETURN(cudaMallocManaged((void**)&(structArray[initNodeCount]->compsub), sizeof(int) * (maxNeighbours+1)));
 
 		for(unsigned k = 0; k < maxNeighbours; ++k){
 			//Initialize all array values to null (-1)
 			structArray[initNodeCount]->cand[k] = -1;
 			structArray[initNodeCount]->cnot[k] = -1;
+		}
+		for (unsigned k = 0; k < maxNeighbours+1; ++k) {
 			structArray[initNodeCount]->compsub[k] = -1;
 		}
 

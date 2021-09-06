@@ -479,6 +479,7 @@ __global__ void sizeKernel(graphNode** nodes, unsigned* sizeArray, unsigned maxN
 	__syncthreads();
 	if(id < workSize){
 		sizeArray[id] = size;
+		//sizeArray[300] = size;
 	}
 }
 
@@ -537,8 +538,10 @@ void writeToFile(graphNode** data, unsigned j, std::ofstream& out, unsigned work
 		if(data[i]->cand[0] == -1 && data[i]->cnot[0] == -1){
 			for(unsigned k = 0; k < j; ++k){
 				out << data[i]->compsub[k] << " ";
+				//std::cout << data[i]->compsub[k] << " ";
 			}
 			out << std::endl;
+			//std::cout << std::endl;
 		}
 	}
 }
@@ -597,7 +600,7 @@ void maximalCliqueEnumeration(graphNode** structArray, unsigned initNodeCount, i
 	unsigned i = 0;
 
 	//Output file stream
-	std::ofstream out("cliques.txt");
+	std::ofstream  out("cliques.txt");
 	do{
 		//Get launch configurations for createNodes
 		unsigned dimBlock = min(workSize + 1 + (32 - ((workSize + 1) % 32)), 512);
@@ -607,9 +610,21 @@ void maximalCliqueEnumeration(graphNode** structArray, unsigned initNodeCount, i
 		unsigned sizeKernelGrid = ceil((float)workSize / sizeKernelBlock);
 		unsigned sharedMemSize = maxNeighbours * sizeKernelBlock * sizeof(int);
 		//std::cout << j << "th loop!\n";
+	
+		
 
 		if(swap == false){
 			//Launch a kernel that will determine how many nodes each of the current nodes will generate
+			if (workSize+1 > prefixArraySize) {
+				prefixArraySize = workSize + 1;
+				cudaFree(dX);
+				delete[] prefixSummed;
+				prefixSummed = new unsigned[prefixArraySize];
+				//Allocate and copy node size count array to device (known as prefixSummed on host)
+				CUDA_CHECK_RETURN(cudaMalloc((void**)&dX, prefixArraySize * sizeof(unsigned)));
+				CUDA_CHECK_RETURN(cudaMemcpy(dX, prefixSummed, prefixArraySize * sizeof(unsigned), cudaMemcpyHostToDevice));
+			}
+
 			sizeKernel <<< sizeKernelGrid, sizeKernelBlock, sharedMemSize >>>(structArray, dX, maxNeighbours, workSize);
 			//printf("%s\n", cudaGetErrorString(cudaGetLastError()));
 			CUDA_CHECK_RETURN(cudaDeviceSynchronize());
@@ -619,6 +634,12 @@ void maximalCliqueEnumeration(graphNode** structArray, unsigned initNodeCount, i
 			if(j > 0 || singleCliques == true){
 				writeToFile(structArray, j + 1, out, workSize);
 			}
+
+			/*if (workSize + 1 > prefixArraySize) {
+				prefixArraySize = workSize + 1;
+				delete[] prefixSummed;
+				prefixSummed = new unsigned[prefixArraySize];
+			}*/
 
 			//Copy the node sizes back from the device
 			CUDA_CHECK_RETURN(cudaMemcpy(prefixSummed, dX, (workSize + 1) * sizeof(unsigned), cudaMemcpyDeviceToHost));
@@ -676,11 +697,28 @@ void maximalCliqueEnumeration(graphNode** structArray, unsigned initNodeCount, i
 			//This segment is the same as the other half of the if statement, but structArray and structArray2 are switched
 
 			//Launch a kernel that will determine how many nodes each of the current nodes will generate
+			if (workSize + 1 > prefixArraySize) {
+				prefixArraySize = workSize + 1;
+				cudaFree(dX);
+				delete[] prefixSummed;
+				prefixSummed = new unsigned[prefixArraySize];
+				//Allocate and copy node size count array to device (known as prefixSummed on host)
+				CUDA_CHECK_RETURN(cudaMalloc((void**)&dX, prefixArraySize * sizeof(unsigned)));
+				CUDA_CHECK_RETURN(cudaMemcpy(dX, prefixSummed, prefixArraySize * sizeof(unsigned), cudaMemcpyHostToDevice));
+			}
+
 			sizeKernel <<< sizeKernelGrid, sizeKernelBlock, sharedMemSize >>>(structArray2, dX, maxNeighbours, workSize);
 			CUDA_CHECK_RETURN(cudaDeviceSynchronize());
 
 			//Write completed nodes' compsubs to the output file
 			writeToFile(structArray2, j + 1, out, workSize);
+
+
+			/*if (workSize + 1 > prefixArraySize) {
+				prefixArraySize = workSize + 1;
+				delete[] prefixSummed;
+				prefixSummed = new unsigned[prefixArraySize];
+			}*/
 
 			//Copy the node sizes back from the device
 			CUDA_CHECK_RETURN(cudaMemcpy(prefixSummed, dX, (workSize +1) * sizeof(unsigned), cudaMemcpyDeviceToHost));
